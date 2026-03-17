@@ -1,6 +1,6 @@
 /**
  * Frontend Components - React
- * Reusable components for displaying content from backend API
+ * Complete CRUD functionality for displaying and managing content
  * 
  * Place this in: src/components/FrontendComponents.jsx
  */
@@ -16,21 +16,30 @@ const API_URL = 'http://localhost:5000/api';
 export function EventsList() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch(`${API_URL}/events`)
-      .then(r => r.json())
-      .then(data => {
-        setEvents(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Errore caricamento eventi:', err);
-        setLoading(false);
-      });
+    fetchEvents();
   }, []);
 
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_URL}/events`);
+      if (!res.ok) throw new Error('Errore caricamento eventi');
+      const data = await res.json();
+      setEvents(data);
+      setError(null);
+    } catch (err) {
+      console.error('Errore:', err);
+      setError('Errore nel caricamento degli eventi');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) return <div className="loading">⏳ Caricamento eventi...</div>;
+  if (error) return <div className="loading">{error}</div>;
 
   return (
     <section className="events-section">
@@ -50,15 +59,15 @@ export function EventCard({ event }) {
     <div className="event-card">
       {event.image_url && (
         <div className="event-image">
-          <img src={event.image_url} alt={event.title} />
+          <img src={event.image_url} alt={event.title} onError={(e) => e.target.style.display = 'none'} />
         </div>
       )}
       <div className="event-content">
-        <span className="event-badge">{event.category}</span>
+        <span className="event-badge">{event.category || 'Evento'}</span>
         <h3>{event.title}</h3>
         <p className="event-date">📅 {formatDate(event.date)} {event.time && `@ ${event.time}`}</p>
         <p className="event-location">📍 {event.location}</p>
-        <p className="event-description">{event.description.substring(0, 100)}...</p>
+        <p className="event-description">{event.description.substring(0, 120)}...</p>
         <button className="event-btn">Scopri di più →</button>
       </div>
     </div>
@@ -72,21 +81,30 @@ export function EventCard({ event }) {
 export function NewsList() {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch(`${API_URL}/news`)
-      .then(r => r.json())
-      .then(data => {
-        setNews(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Errore caricamento news:', err);
-        setLoading(false);
-      });
+    fetchNews();
   }, []);
 
+  const fetchNews = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_URL}/news`);
+      if (!res.ok) throw new Error('Errore caricamento notizie');
+      const data = await res.json();
+      setNews(data);
+      setError(null);
+    } catch (err) {
+      console.error('Errore:', err);
+      setError('Errore nel caricamento delle notizie');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) return <div className="loading">⏳ Caricamento notizie...</div>;
+  if (error) return <div className="loading">{error}</div>;
 
   return (
     <section className="news-section">
@@ -105,12 +123,12 @@ export function NewsItem({ article }) {
   return (
     <article className="news-item">
       {article.featured_image && (
-        <img src={article.featured_image} alt={article.title} className="news-thumbnail" />
+        <img src={article.featured_image} alt={article.title} className="news-thumbnail" onError={(e) => e.target.style.display = 'none'} />
       )}
       <div className="news-meta">
         <p className="news-date">{formatDate(article.published_at)}</p>
         <h3>{article.title}</h3>
-        <p className="news-excerpt">{article.excerpt}</p>
+        <p className="news-excerpt">{article.excerpt || 'Leggi l\'articolo completo per saperne di più.'}</p>
         <a href={`/news/${article.slug}`} className="read-more">Leggi tutto →</a>
       </div>
     </article>
@@ -125,28 +143,37 @@ export function Gallery({ category, eventId }) {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    let url = `${API_URL}/gallery`;
-    const params = new URLSearchParams();
-    if (category) params.append('category', category);
-    if (eventId) params.append('event_id', eventId);
-    
-    if (params.toString()) url += '?' + params.toString();
-
-    fetch(url)
-      .then(r => r.json())
-      .then(data => {
-        setImages(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Errore caricamento gallery:', err);
-        setLoading(false);
-      });
+    fetchGallery();
   }, [category, eventId]);
 
+  const fetchGallery = async () => {
+    try {
+      setLoading(true);
+      let url = `${API_URL}/gallery`;
+      const params = new URLSearchParams();
+      if (category) params.append('category', category);
+      if (eventId) params.append('event_id', eventId);
+      
+      if (params.toString()) url += '?' + params.toString();
+
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Errore caricamento galleria');
+      const data = await res.json();
+      setImages(data);
+      setError(null);
+    } catch (err) {
+      console.error('Errore:', err);
+      setError('Errore nel caricamento della galleria');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) return <div className="loading">⏳ Caricamento galleria...</div>;
+  if (error) return <div className="loading">{error}</div>;
 
   return (
     <section className="gallery-section">
@@ -158,7 +185,7 @@ export function Gallery({ category, eventId }) {
             className="gallery-item"
             onClick={() => setSelectedImage(img)}
           >
-            <img src={img.image_url} alt={img.title} className="gallery-image" />
+            <img src={img.image_url} alt={img.title} className="gallery-image" onError={(e) => e.target.style.display = 'none'} />
             <div className="gallery-overlay">
               <p>{img.title}</p>
             </div>
@@ -176,6 +203,8 @@ export function Gallery({ category, eventId }) {
           </div>
         </div>
       )}
+
+      {images.length === 0 && <p className="no-data">Nessuna immagine disponibile</p>}
     </section>
   );
 }
@@ -224,8 +253,10 @@ export function ContactForm() {
           subject: '',
           message: ''
         });
+        setTimeout(() => setMessage(''), 5000);
       } else {
-        setMessage('❌ Errore invio messaggio. Riprova.');
+        const error = await res.json();
+        setMessage(`❌ ${error.error || 'Errore invio messaggio'}`);
       }
     } catch (err) {
       console.error('Errore:', err);
@@ -282,7 +313,11 @@ export function ContactForm() {
           {loading ? '⏳ Invio...' : '✓ Invia Messaggio'}
         </button>
       </form>
-      {message && <p className={`form-message ${message.includes('✓') ? 'success' : 'error'}`}>{message}</p>}
+      {message && (
+        <p className={`form-message ${message.includes('✓') ? 'success' : 'error'}`}>
+          {message}
+        </p>
+      )}
     </section>
   );
 }
@@ -293,11 +328,21 @@ export function ContactForm() {
 
 export function DonationWidget() {
   const [amount, setAmount] = useState(20);
+  const [customAmount, setCustomAmount] = useState('');
   const [selectedMethod, setSelectedMethod] = useState('stripe');
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
 
   const handleDonate = async () => {
+    const finalAmount = customAmount ? parseFloat(customAmount) : amount;
+    
+    if (finalAmount < 1) {
+      setMessage('❌ Importo minimo € 1');
+      return;
+    }
+
     setLoading(true);
+    setMessage('');
     
     try {
       const res = await fetch(`${API_URL}/donations`, {
@@ -306,17 +351,22 @@ export function DonationWidget() {
         body: JSON.stringify({
           donor_name: 'Anonymous',
           donor_email: 'donor@cortile.local',
-          amount: amount,
+          amount: finalAmount,
           payment_method: selectedMethod
         })
       });
 
       if (res.ok) {
-        alert('✓ Donazione registrata! Grazie!');
+        setMessage(`✓ Donazione di €${finalAmount} registrata! Grazie del tuo supporto!`);
+        setCustomAmount('');
+        setAmount(20);
+        setTimeout(() => setMessage(''), 5000);
+      } else {
+        setMessage('❌ Errore durante la donazione');
       }
     } catch (err) {
       console.error('Errore:', err);
-      alert('❌ Errore donazione');
+      setMessage('❌ Errore connessione');
     } finally {
       setLoading(false);
     }
@@ -332,8 +382,11 @@ export function DonationWidget() {
             {[10, 20, 50, 100].map(val => (
               <button
                 key={val}
-                className={`amount-btn ${amount === val ? 'active' : ''}`}
-                onClick={() => setAmount(val)}
+                className={`amount-btn ${amount === val && !customAmount ? 'active' : ''}`}
+                onClick={() => {
+                  setAmount(val);
+                  setCustomAmount('');
+                }}
               >
                 €{val}
               </button>
@@ -341,9 +394,14 @@ export function DonationWidget() {
           </div>
           <input
             type="number"
-            value={amount}
-            onChange={(e) => setAmount(Number(e.target.value))}
+            value={customAmount}
+            onChange={(e) => {
+              setCustomAmount(e.target.value);
+              if (e.target.value) setAmount(0);
+            }}
+            placeholder="Importo personalizzato"
             min="1"
+            step="0.01"
             className="custom-amount"
           />
         </div>
@@ -367,6 +425,15 @@ export function DonationWidget() {
             />
             PayPal
           </label>
+          <label>
+            <input
+              type="radio"
+              value="bank"
+              checked={selectedMethod === 'bank'}
+              onChange={(e) => setSelectedMethod(e.target.value)}
+            />
+            Bonifico Bancario
+          </label>
         </div>
 
         <button 
@@ -374,11 +441,18 @@ export function DonationWidget() {
           onClick={handleDonate}
           disabled={loading}
         >
-          {loading ? '⏳ Elaborazione...' : `Dona €${amount}`}
+          {loading ? '⏳ Elaborazione...' : `Dona €${customAmount || amount}`}
         </button>
 
+        {message && (
+          <p className={`form-message ${message.includes('✓') ? 'success' : 'error'}`}>
+            {message}
+          </p>
+        )}
+
         <p className="donation-info">
-          Le tue donazioni supportano le attività culturali del Cortile del Libro e della Carta.
+          🛡️ Le tue donazioni supportano le attività culturali del Cortile del Libro e della Carta.<br/>
+          Tutti i dati sono crittografati e protetti.
         </p>
       </div>
     </section>
@@ -392,24 +466,34 @@ export function DonationWidget() {
 export function SponsorsList() {
   const [sponsors, setSponsors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch(`${API_URL}/sponsors`)
-      .then(r => r.json())
-      .then(data => {
-        setSponsors(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Errore caricamento sponsor:', err);
-        setLoading(false);
-      });
+    fetchSponsors();
   }, []);
 
+  const fetchSponsors = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_URL}/sponsors`);
+      if (!res.ok) throw new Error('Errore caricamento sponsor');
+      const data = await res.json();
+      setSponsors(data);
+      setError(null);
+    } catch (err) {
+      console.error('Errore:', err);
+      setError('Errore nel caricamento degli sponsor');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) return <div className="loading">⏳ Caricamento sponsor...</div>;
+  if (error) return <div className="loading">{error}</div>;
 
   const goldSponsors = sponsors.filter(s => s.sponsor_level === 'Gold');
   const silverSponsors = sponsors.filter(s => s.sponsor_level === 'Silver');
+  const otherSponsors = sponsors.filter(s => !s.sponsor_level || (s.sponsor_level !== 'Gold' && s.sponsor_level !== 'Silver'));
 
   return (
     <section className="sponsors-section">
@@ -436,6 +520,19 @@ export function SponsorsList() {
           </div>
         </div>
       )}
+
+      {otherSponsors.length > 0 && (
+        <div className="sponsor-tier">
+          <h3>🤝 Partner</h3>
+          <div className="sponsors-grid">
+            {otherSponsors.map(sponsor => (
+              <SponsorCard key={sponsor.id} sponsor={sponsor} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {sponsors.length === 0 && <p className="no-data">Nessuno sponsor disponibile</p>}
     </section>
   );
 }
@@ -444,7 +541,7 @@ function SponsorCard({ sponsor }) {
   return (
     <div className="sponsor-card">
       {sponsor.logo_url && (
-        <img src={sponsor.logo_url} alt={sponsor.company_name} />
+        <img src={sponsor.logo_url} alt={sponsor.company_name} onError={(e) => e.target.style.display = 'none'} />
       )}
       <h4>{sponsor.company_name}</h4>
       {sponsor.website && (
@@ -460,7 +557,7 @@ function SponsorCard({ sponsor }) {
 // UTILITY FUNCTIONS
 // ============================================
 
-function formatDate(dateString) {
+export function formatDate(dateString) {
   if (!dateString) return '';
   const date = new Date(dateString);
   return date.toLocaleDateString('it-IT', {

@@ -1,3 +1,10 @@
+/**
+ * Cortile Backend - Express.js Server
+ * FULL CRUD API endpoints with Create, Read, Update, Delete
+ * 
+ * Run: node server.js
+ */
+
 import express from 'express';
 import cors from 'cors';
 import sqlite3 from 'sqlite3';
@@ -29,13 +36,27 @@ const db = new sqlite3.Database(DB_PATH, (err) => {
 db.run('PRAGMA foreign_keys = ON');
 
 // ============================================
-// EVENTS ENDPOINTS
+// UTILITY FUNCTIONS
+// ============================================
+
+// Generic run promise wrapper
+const dbRun = (sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function(err) {
+      if (err) reject(err);
+      else resolve({ lastID: this.lastID, changes: this.changes });
+    });
+  });
+};
+
+// ============================================
+// EVENTS ENDPOINTS - FULL CRUD
 // ============================================
 
 // GET all events (published only, sorted by date)
 app.get('/api/events', (req, res) => {
   const sql = `
-    SELECT id, title, description, date, time, location, image_url, category
+    SELECT id, title, description, date, time, location, image_url, category, status
     FROM events
     WHERE status = 'published'
     ORDER BY date DESC
@@ -68,9 +89,9 @@ app.get('/api/events/:id', (req, res) => {
   });
 });
 
-// POST new event (admin only)
+// POST create new event
 app.post('/api/events', (req, res) => {
-  const { title, description, date, time, location, category, image_url } = req.body;
+  const { title, description, date, time, location, category, image_url, status } = req.body;
   
   if (!title || !description || !date || !location) {
     return res.status(400).json({ error: 'Campi obbligatori: title, description, date, location' });
@@ -78,10 +99,10 @@ app.post('/api/events', (req, res) => {
   
   const sql = `
     INSERT INTO events (title, description, date, time, location, category, image_url, status, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', 1)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
   `;
   
-  db.run(sql, [title, description, date, time, location, category, image_url], function(err) {
+  db.run(sql, [title, description, date, time, location, category, image_url, status || 'draft'], function(err) {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -94,6 +115,10 @@ app.put('/api/events/:id', (req, res) => {
   const { id } = req.params;
   const { title, description, date, time, location, category, image_url, status } = req.body;
   
+  if (!title || !description || !date || !location) {
+    return res.status(400).json({ error: 'Campi obbligatori: title, description, date, location' });
+  }
+
   const sql = `
     UPDATE events
     SET title = ?, description = ?, date = ?, time = ?, location = ?, category = ?, image_url = ?, status = ?, updated_at = CURRENT_TIMESTAMP
@@ -128,13 +153,13 @@ app.delete('/api/events/:id', (req, res) => {
 });
 
 // ============================================
-// NEWS ENDPOINTS
+// NEWS ENDPOINTS - FULL CRUD
 // ============================================
 
 // GET all news (published only)
 app.get('/api/news', (req, res) => {
   const sql = `
-    SELECT id, title, slug, excerpt, featured_image, published_at
+    SELECT id, title, slug, excerpt, featured_image, published_at, status
     FROM news
     WHERE status = 'published'
     ORDER BY published_at DESC
@@ -148,10 +173,12 @@ app.get('/api/news', (req, res) => {
   });
 });
 
-// GET single news article
+// GET single news article by slug or ID
 app.get('/api/news/:slug', (req, res) => {
   const { slug } = req.params;
-  const sql = `
+  
+  // Try to find by slug first
+  let sql = `
     SELECT * FROM news
     WHERE slug = ? AND status = 'published'
   `;
@@ -167,9 +194,9 @@ app.get('/api/news/:slug', (req, res) => {
   });
 });
 
-// POST new news article
+// POST create new news article
 app.post('/api/news', (req, res) => {
-  const { title, slug, content, excerpt, featured_image } = req.body;
+  const { title, slug, content, excerpt, featured_image, status } = req.body;
   
   if (!title || !slug || !content) {
     return res.status(400).json({ error: 'Campi obbligatori: title, slug, content' });
@@ -177,10 +204,10 @@ app.post('/api/news', (req, res) => {
   
   const sql = `
     INSERT INTO news (title, slug, content, excerpt, featured_image, status, author_id, published_at)
-    VALUES (?, ?, ?, ?, ?, 'published', 1, CURRENT_TIMESTAMP)
+    VALUES (?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
   `;
   
-  db.run(sql, [title, slug, content, excerpt, featured_image], function(err) {
+  db.run(sql, [title, slug, content, excerpt, featured_image, status || 'published'], function(err) {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -188,24 +215,65 @@ app.post('/api/news', (req, res) => {
   });
 });
 
+// PUT update news article
+app.put('/api/news/:id', (req, res) => {
+  const { id } = req.params;
+  const { title, slug, content, excerpt, featured_image, status } = req.body;
+  
+  if (!title || !slug || !content) {
+    return res.status(400).json({ error: 'Campi obbligatori: title, slug, content' });
+  }
+
+  const sql = `
+    UPDATE news
+    SET title = ?, slug = ?, content = ?, excerpt = ?, featured_image = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `;
+  
+  db.run(sql, [title, slug, content, excerpt, featured_image, status, id], function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+    res.json({ message: 'Article updated' });
+  });
+});
+
+// DELETE news article
+app.delete('/api/news/:id', (req, res) => {
+  const { id } = req.params;
+  const sql = 'DELETE FROM news WHERE id = ?';
+  
+  db.run(sql, [id], function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+    res.json({ message: 'Article deleted' });
+  });
+});
+
 // ============================================
-// GALLERY ENDPOINTS
+// GALLERY ENDPOINTS - FULL CRUD
 // ============================================
 
 // GET all gallery images
 app.get('/api/gallery', (req, res) => {
   const { category, event_id } = req.query;
   
-  let sql = 'SELECT id, title, description, image_url, category, event_id FROM gallery';
+  let sql = 'SELECT id, title, description, image_url, category, event_id FROM gallery WHERE 1=1';
   const params = [];
   
   if (category) {
-    sql += ' WHERE category = ?';
+    sql += ' AND category = ?';
     params.push(category);
   }
   if (event_id) {
-    sql += category ? ' AND' : ' WHERE';
-    sql += ' event_id = ?';
+    sql += ' AND event_id = ?';
     params.push(event_id);
   }
   
@@ -232,17 +300,87 @@ app.post('/api/gallery', (req, res) => {
     VALUES (?, ?, ?, ?, ?)
   `;
   
-  db.run(sql, [title, description, image_url, category, event_id], function(err) {
+  db.run(sql, [title, description, image_url, category, event_id || null], function(err) {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
-    res.status(201).json({ id: this.lastID });
+    res.status(201).json({ id: this.lastID, message: 'Image added' });
+  });
+});
+
+// PUT update gallery image
+app.put('/api/gallery/:id', (req, res) => {
+  const { id } = req.params;
+  const { title, description, image_url, category, event_id } = req.body;
+  
+  if (!title || !image_url) {
+    return res.status(400).json({ error: 'Campi obbligatori: title, image_url' });
+  }
+
+  const sql = `
+    UPDATE gallery
+    SET title = ?, description = ?, image_url = ?, category = ?, event_id = ?
+    WHERE id = ?
+  `;
+  
+  db.run(sql, [title, description, image_url, category, event_id || null, id], function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+    res.json({ message: 'Image updated' });
+  });
+});
+
+// DELETE gallery image
+app.delete('/api/gallery/:id', (req, res) => {
+  const { id } = req.params;
+  const sql = 'DELETE FROM gallery WHERE id = ?';
+  
+  db.run(sql, [id], function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+    res.json({ message: 'Image deleted' });
   });
 });
 
 // ============================================
-// CONTACTS ENDPOINTS
+// CONTACTS ENDPOINTS - CRUD
 // ============================================
+
+// GET all contacts
+app.get('/api/contacts', (req, res) => {
+  const sql = 'SELECT * FROM contacts ORDER BY created_at DESC';
+  
+  db.all(sql, [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
+
+// GET single contact
+app.get('/api/contacts/:id', (req, res) => {
+  const { id } = req.params;
+  const sql = 'SELECT * FROM contacts WHERE id = ?';
+  
+  db.get(sql, [id], (err, row) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (!row) {
+      return res.status(404).json({ error: 'Contact not found' });
+    }
+    res.json(row);
+  });
+});
 
 // POST contact form submission
 app.post('/api/contacts', (req, res) => {
@@ -268,13 +406,59 @@ app.post('/api/contacts', (req, res) => {
     
     console.log(`📧 Nuovo messaggio da ${name}: ${subject}`);
     
-    res.status(201).json({ id: this.lastID, message: 'Grazie! Il tuo messaggio è stato ricevuto.' });
+    res.status(201).json({ id: this.lastID, message: 'Messaggio ricevuto' });
   });
 });
 
-// GET all contacts (admin only)
-app.get('/api/contacts', (req, res) => {
-  const sql = 'SELECT * FROM contacts ORDER BY created_at DESC';
+// PUT update contact status
+app.put('/api/contacts/:id', (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  
+  if (!status) {
+    return res.status(400).json({ error: 'Campo obbligatorio: status' });
+  }
+
+  const sql = `
+    UPDATE contacts
+    SET status = ?, replied_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `;
+  
+  db.run(sql, [status, id], function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Contact not found' });
+    }
+    res.json({ message: 'Contact updated' });
+  });
+});
+
+// DELETE contact
+app.delete('/api/contacts/:id', (req, res) => {
+  const { id } = req.params;
+  const sql = 'DELETE FROM contacts WHERE id = ?';
+  
+  db.run(sql, [id], function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Contact not found' });
+    }
+    res.json({ message: 'Contact deleted' });
+  });
+});
+
+// ============================================
+// DONATIONS ENDPOINTS - CRUD
+// ============================================
+
+// GET all donations (admin)
+app.get('/api/donations', (req, res) => {
+  const sql = 'SELECT * FROM donations ORDER BY created_at DESC';
   
   db.all(sql, [], (err, rows) => {
     if (err) {
@@ -283,10 +467,6 @@ app.get('/api/contacts', (req, res) => {
     res.json(rows);
   });
 });
-
-// ============================================
-// DONATIONS ENDPOINTS
-// ============================================
 
 // POST new donation
 app.post('/api/donations', (req, res) => {
@@ -309,7 +489,49 @@ app.post('/api/donations', (req, res) => {
   });
 });
 
-// GET donation stats (admin only)
+// PUT update donation status
+app.put('/api/donations/:id', (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  
+  if (!status) {
+    return res.status(400).json({ error: 'Campo obbligatorio: status' });
+  }
+
+  const sql = `
+    UPDATE donations
+    SET status = ?, completed_at = CASE WHEN ? = 'completed' THEN CURRENT_TIMESTAMP ELSE completed_at END
+    WHERE id = ?
+  `;
+  
+  db.run(sql, [status, status, id], function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Donation not found' });
+    }
+    res.json({ message: 'Donation updated' });
+  });
+});
+
+// DELETE donation
+app.delete('/api/donations/:id', (req, res) => {
+  const { id } = req.params;
+  const sql = 'DELETE FROM donations WHERE id = ?';
+  
+  db.run(sql, [id], function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Donation not found' });
+    }
+    res.json({ message: 'Donation deleted' });
+  });
+});
+
+// GET donation stats
 app.get('/api/donations/stats', (req, res) => {
   const sql = `
     SELECT 
@@ -329,18 +551,81 @@ app.get('/api/donations/stats', (req, res) => {
 });
 
 // ============================================
-// SPONSORS ENDPOINTS
+// SPONSORS ENDPOINTS - FULL CRUD
 // ============================================
 
 // GET all sponsors
 app.get('/api/sponsors', (req, res) => {
-  const sql = 'SELECT id, company_name, logo_url, website, sponsor_level FROM sponsors ORDER BY sponsor_level';
+  const sql = 'SELECT * FROM sponsors ORDER BY sponsor_level DESC, company_name ASC';
   
   db.all(sql, [], (err, rows) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
     res.json(rows);
+  });
+});
+
+// POST new sponsor
+app.post('/api/sponsors', (req, res) => {
+  const { company_name, logo_url, website, sponsor_level, contact_email, phone } = req.body;
+  
+  if (!company_name) {
+    return res.status(400).json({ error: 'Nome azienda obbligatorio' });
+  }
+
+  const sql = `
+    INSERT INTO sponsors (company_name, logo_url, website, sponsor_level, contact_email, phone)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `;
+  
+  db.run(sql, [company_name, logo_url, website, sponsor_level, contact_email, phone], function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.status(201).json({ id: this.lastID, message: 'Sponsor added' });
+  });
+});
+
+// PUT update sponsor
+app.put('/api/sponsors/:id', (req, res) => {
+  const { id } = req.params;
+  const { company_name, logo_url, website, sponsor_level, contact_email, phone } = req.body;
+  
+  if (!company_name) {
+    return res.status(400).json({ error: 'Nome azienda obbligatorio' });
+  }
+
+  const sql = `
+    UPDATE sponsors
+    SET company_name = ?, logo_url = ?, website = ?, sponsor_level = ?, contact_email = ?, phone = ?
+    WHERE id = ?
+  `;
+  
+  db.run(sql, [company_name, logo_url, website, sponsor_level, contact_email, phone, id], function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Sponsor not found' });
+    }
+    res.json({ message: 'Sponsor updated' });
+  });
+});
+
+// DELETE sponsor
+app.delete('/api/sponsors/:id', (req, res) => {
+  const { id } = req.params;
+  const sql = 'DELETE FROM sponsors WHERE id = ?';
+  
+  db.run(sql, [id], function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Sponsor not found' });
+    }
+    res.json({ message: 'Sponsor deleted' });
   });
 });
 
