@@ -1,0 +1,32 @@
+{
+  "name": "backend_cortile_del_lbro_e_della_carta",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NicoMaker/Backend_Cortile_Del_Lbro_e_della_Carta.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/NicoMaker/Backend_Cortile_Del_Lbro_e_della_Carta/issues"
+  },
+  "homepage": "https://github.com/NicoMaker/Backend_Cortile_Del_Lbro_e_della_Carta#readme",
+  "devDependencies": {
+    "tailwindcss": "^4.2.1"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "pg": "^8.20.0",
+    "sqlite3": "^6.0.1",
+    "stripe": "^20.4.1"
+  },
+  "description": ""
+}
