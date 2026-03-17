@@ -1,120 +1,87 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
 import './App.css'
+import { EventsList, NewsList, Gallery, ContactForm, DonationWidget, SponsorsList } from './components/FrontendComponents'
+import AdminPanel from './components/AdminPanel'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [showAdmin, setShowAdmin] = useState(false)
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="app">
+      {!showAdmin ? (
+        <>
+          {/* NAVBAR */}
+          <nav className="navbar">
+            <div className="navbar-container">
+              <h1 className="logo">🎯 Cortile del Libro e della Carta</h1>
+              <button 
+                className="admin-toggle"
+                onClick={() => setShowAdmin(true)}
+              >
+                🔧 Admin
+              </button>
+            </div>
+          </nav>
 
-      <div className="ticks"></div>
+          {/* MAIN CONTENT */}
+          <main className="main-content">
+            {/* HERO SECTION */}
+            <section className="hero">
+              <div className="hero-content">
+                <h2>Benvenuti al Cortile 2026</h2>
+                <p>Un'esperienza culturale unica dedicata al libro, alla carta e alle storie che raccontano</p>
+              </div>
+            </section>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+            {/* EVENTS */}
+            <section className="section">
+              <EventsList />
+            </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+            {/* GALLERY */}
+            <section className="section">
+              <Gallery />
+            </section>
+
+            {/* NEWS */}
+            <section className="section">
+              <NewsList />
+            </section>
+
+            {/* DONATION */}
+            <section className="section">
+              <DonationWidget />
+            </section>
+
+            {/* SPONSORS */}
+            <section className="section">
+              <SponsorsList />
+            </section>
+
+            {/* CONTACT */}
+            <section className="section">
+              <ContactForm />
+            </section>
+          </main>
+
+          {/* FOOTER */}
+          <footer className="footer">
+            <p>&copy; 2026 Cortile del Libro e della Carta. Tutti i diritti riservati.</p>
+            <p>📍 Bologna | 📧 info@cortile.local</p>
+          </footer>
+        </>
+      ) : (
+        <div className="admin-wrapper">
+          <button 
+            className="back-btn"
+            onClick={() => setShowAdmin(false)}
+          >
+            ← Torna al Sito
+          </button>
+          <AdminPanel />
+        </div>
+      )}
+    </div>
   )
 }
 
